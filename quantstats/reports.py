@@ -843,6 +843,8 @@ def metrics(
 
     metrics["~~~~~~~~~~~~~~"] = blank
 
+    metrics["WinRate"] = _stats.win_rate(df, compounded=compounded, prepare_returns=False)
+
     metrics["Sharpe"] = _stats.sharpe(df, rf, win_year, True)
     metrics["Prob. Sharpe Ratio %"] = (
         _stats.probabilistic_sharpe_ratio(df, rf, win_year, False) * pct
