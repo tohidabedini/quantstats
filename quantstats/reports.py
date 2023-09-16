@@ -636,6 +636,7 @@ def full(
         benchmark_title=benchmark_title,
         strategy_title=strategy_title,
         active=active,
+        rolling=kwargs["rolling"],
     )
 
 
@@ -1365,33 +1366,35 @@ def plots(
             prepare_returns=False,
         )
 
-    _plots.rolling_volatility(
-        returns,
-        benchmark,
-        grayscale=grayscale,
-        figsize=small_fig_size,
-        show=True,
-        ylabel=False,
-        period=win_half_year,
-    )
+    if kwargs["rolling"]:
 
-    _plots.rolling_sharpe(
-        returns,
-        grayscale=grayscale,
-        figsize=small_fig_size,
-        show=True,
-        ylabel=False,
-        period=win_half_year,
-    )
+        _plots.rolling_volatility(
+            returns,
+            benchmark,
+            grayscale=grayscale,
+            figsize=small_fig_size,
+            show=True,
+            ylabel=False,
+            period=win_half_year,
+        )
 
-    _plots.rolling_sortino(
-        returns,
-        grayscale=grayscale,
-        figsize=small_fig_size,
-        show=True,
-        ylabel=False,
-        period=win_half_year,
-    )
+        _plots.rolling_sharpe(
+            returns,
+            grayscale=grayscale,
+            figsize=small_fig_size,
+            show=True,
+            ylabel=False,
+            period=win_half_year,
+        )
+
+        _plots.rolling_sortino(
+            returns,
+            grayscale=grayscale,
+            figsize=small_fig_size,
+            show=True,
+            ylabel=False,
+            period=win_half_year,
+        )
 
     if isinstance(returns, _pd.Series):
         _plots.drawdowns_periods(
