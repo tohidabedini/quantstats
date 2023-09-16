@@ -586,7 +586,8 @@ def full(
                 else:
                     iDisplay(dd_info)
 
-        iDisplay(iHTML("<h4>Strategy Visualization</h4>"))
+        if plot:
+            iDisplay(iHTML("<h4>Strategy Visualization</h4>"))
     else:
         print("[Performance Metrics]\n")
         metrics(
