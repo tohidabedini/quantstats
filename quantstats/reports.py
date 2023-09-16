@@ -499,6 +499,8 @@ def full(
     compounded=True,
     periods_per_year=252,
     match_dates=True,
+    rolling=True,
+    plot=True,
     **kwargs,
 ):
 
@@ -621,23 +623,22 @@ def full(
                             dd_info, headers="keys", tablefmt="simple", floatfmt=".2f"
                         )
                     )
-
+    if plot:
         print("\n\n")
         print("[Strategy Visualization]\nvia Matplotlib")
-
-    plots(
-        returns=returns,
-        benchmark=benchmark,
-        grayscale=grayscale,
-        figsize=figsize,
-        mode="full",
-        periods_per_year=periods_per_year,
-        prepare_returns=False,
-        benchmark_title=benchmark_title,
-        strategy_title=strategy_title,
-        active=active,
-        rolling=kwargs["rolling"],
-    )
+        plots(
+            returns=returns,
+            benchmark=benchmark,
+            grayscale=grayscale,
+            figsize=figsize,
+            mode="full",
+            periods_per_year=periods_per_year,
+            prepare_returns=False,
+            benchmark_title=benchmark_title,
+            strategy_title=strategy_title,
+            active=active,
+            rolling=rolling,
+        )
 
 
 def basic(
@@ -1211,6 +1212,7 @@ def plots(
     periods_per_year=252,
     prepare_returns=True,
     match_dates=True,
+    rolling=True,
     **kwargs,
 ):
 
@@ -1283,6 +1285,7 @@ def plots(
         if match_dates is True:
             returns, benchmark = _match_dates(returns, benchmark)
 
+
     _plots.returns(
         returns,
         benchmark,
@@ -1314,6 +1317,7 @@ def plots(
             ylabel=False,
             prepare_returns=False,
         )
+
 
     _plots.yearly_returns(
         returns,
@@ -1366,7 +1370,7 @@ def plots(
             prepare_returns=False,
         )
 
-    if kwargs["rolling"]:
+    if rolling:
 
         _plots.rolling_volatility(
             returns,
