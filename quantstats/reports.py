@@ -492,6 +492,10 @@ def html(
 
 def full(
     returns,
+    equity=None,
+    close_prices=None,
+    orders=None,
+    fee=0,
     benchmark=None,
     rf=0.0,
     grayscale=False,
@@ -556,6 +560,10 @@ def full(
         iDisplay(
             metrics(
                 returns=returns,
+                equity=equity,
+                close_prices=close_prices,
+                orders=orders,
+                fee=fee,
                 benchmark=benchmark,
                 rf=rf,
                 display=display,
@@ -593,6 +601,10 @@ def full(
         print("[Performance Metrics]\n")
         metrics(
             returns=returns,
+            equity=equity,
+            close_prices=close_prices,
+            orders=orders,
+            fee=fee,
             benchmark=benchmark,
             rf=rf,
             display=display,
@@ -724,6 +736,10 @@ def basic(
 
 def metrics(
     returns,
+    equity=None,
+    close_prices=None,
+    orders=None,
+    fee=0,
     benchmark=None,
     rf=0.0,
     display=True,
@@ -735,6 +751,9 @@ def metrics(
     match_dates=True,
     **kwargs,
 ):
+
+    if orders is not None:
+        trades_object = _stats.Trades(orders=orders)
 
     if match_dates:
         returns = returns.dropna()
@@ -844,7 +863,16 @@ def metrics(
 
     metrics["~~~~~~~~~~~~~~"] = blank
 
-    metrics["WinRate"] = _stats.win_rate(df, compounded=compounded, prepare_returns=False)
+    if equity is not None:
+        metrics["Final Equity $"] = _stats.final_equity(equity)
+        metrics["Max Equity $"] = _stats.max_equity(equity)
+
+    if close_prices is not None:
+        metrics["Buy & Hold Return %"] = _stats.buy_and_hold_return(close_prices, fee)
+        metrics["Max Possible Return (Buy only, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee)
+
+
+    metrics["WinRate %"] = _stats.win_rate(df, compounded=compounded, prepare_returns=False) * 100
 
     metrics["Sharpe"] = _stats.sharpe(df, rf, win_year, True)
     metrics["Prob. Sharpe Ratio %"] = (
@@ -970,8 +998,22 @@ def metrics(
     #     metrics['GPR (1Y)'] = _stats.gain_to_pain_ratio(df, rf, "A")
     metrics["~~~~~~~"] = blank
 
+    if orders is not None:
+        metrics["Profit Factor"] = _stats.profit_factor(df, prepare_returns=False)
+        metrics['Expectancy %'] = trades_object.average_trade_return()
+        metrics['SQN'] = trades_object.sqn()
+
+        metrics['Net Profit'] = trades_object.net_profit()
+        metrics['Gross Profit'] = trades_object.gross_profit()
+        metrics['Gross Loss'] = trades_object.gross_loss()
+
+
+    else:
+        metrics["Profit Factor"] = _stats.profit_factor(df, prepare_returns=False)
+        metrics['Expectancy %'] = _stats.avg_return(df, compounded=compounded, prepare_returns=False) * 100
+
+    metrics["~~~~~~~~~~~~~"] = blank
     metrics["Payoff Ratio"] = _stats.payoff_ratio(df, prepare_returns=False)
-    metrics["Profit Factor"] = _stats.profit_factor(df, prepare_returns=False)
     metrics["Common Sense Ratio"] = _stats.common_sense_ratio(df, prepare_returns=False)
     metrics["CPC Index"] = _stats.cpc_index(df, prepare_returns=False)
     metrics["Tail Ratio"] = _stats.tail_ratio(df, prepare_returns=False)
@@ -1024,6 +1066,14 @@ def metrics(
         metrics["Worst Year %"] = (
             _stats.worst(df, compounded=compounded, aggregate="A", prepare_returns=False) * pct
         )
+
+        if orders is not None:
+            metrics["~~~~~~~~~"] = blank
+            metrics["# Trades *int"] = trades_object.number_of_trades()
+            metrics["Best Trade Return %"] = trades_object.best_trade_return()
+            metrics["Worst Trade Return %"] = trades_object.worst_trade_return()
+            metrics["Max. Trade Duration"] = trades_object.max_trade_duration()
+            metrics["Avg. Trade Duration"] = trades_object.average_trade_duration()
 
     # dd
     metrics["~~~~"] = blank

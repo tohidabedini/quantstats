@@ -1086,3 +1086,128 @@ def monthly_returns(returns, eoy=True, compounded=True, prepare_returns=True):
     returns.index.name = None
 
     return returns
+
+def final_equity(equity):
+    return equity[-1]
+
+def max_equity(equity):
+    return equity.max()
+
+def max_possible_compound_return(close_prices, fee):
+    return CompoundReturnCalculator().calculate_compound_return_from_prices_list(close_prices, fee=fee) * 100
+
+def buy_and_hold_return(close_prices, fee=0, fee_type="floating"):
+    initial_value = close_prices[0]
+    final_value = close_prices[-1]
+
+    if fee_type == "fixed":
+        delta = (final_value - initial_value - fee)
+    elif fee_type == "floating":
+        delta = (final_value - (initial_value * (1 + fee)))
+
+    return_pct = (delta / initial_value) * 100
+    return return_pct
+
+
+
+class CompoundReturnCalculator:
+    # TO DO: Consider two-sided market
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def find_rising_sequences(prices_list):
+        rising_sequences = []
+        current_sequence = []
+
+        for value in prices_list:
+            if not current_sequence or value > current_sequence[-1]:
+                current_sequence.append(value)
+            else:
+                if len(current_sequence) > 1:
+                    rising_sequences.append(current_sequence)
+                current_sequence = [value]
+
+        if len(current_sequence) > 1:
+            rising_sequences.append(current_sequence)
+
+        return rising_sequences
+
+    @staticmethod
+    def calculate_returns(rising_sequences, fee=0, fee_type="floating"):
+        # fee_type: floating, fixed
+        returns = []
+
+        for sequence in rising_sequences:
+            initial_value = sequence[0]
+            final_value = sequence[-1]
+
+            if fee_type == "fixed":
+                delta = (final_value - initial_value - fee)
+            elif fee_type == "floating":
+                delta = (final_value - (initial_value * (1+fee)))
+
+            return_pct = (delta / initial_value)
+            returns.append(return_pct)
+
+        return returns
+
+    @staticmethod
+    def calculate_compound_return(returns):
+        compound_return = 1.0
+        for r in returns:
+            compound_return *= (1.0 + r)
+        return compound_return - 1.0
+
+    def calculate_compound_return_from_prices_list(self, prices_list, log=False, fee=0, fee_type="floating"):
+        rising_sequences = self.find_rising_sequences(prices_list=prices_list)
+        returns = self.calculate_returns(rising_sequences=rising_sequences, fee=fee, fee_type=fee_type)
+
+        if log:
+            for i, sequence in enumerate(rising_sequences):
+                print(f"Rising Sequence {i + 1}: {sequence}")
+                print(f"Return: {returns[i]}\n")
+
+        compound_return = self.calculate_compound_return(returns=returns)
+
+        return compound_return
+
+class Trades:
+    def __init__(self, orders):
+        self.orders=orders
+
+    def number_of_trades(self):
+        return len(self.orders)
+
+    def best_trade_return(self):
+        return self.orders["Return"].max() * 100
+
+    def worst_trade_return(self):
+        return self.orders["Return"].min() * 100
+
+    def average_trade_return(self):
+        return self.orders["Return"].mean() * 100
+
+    def max_trade_duration(self):
+        return self.orders["Duration"].max()
+
+    def average_trade_duration(self):
+        return self.orders["Duration"].mean()
+
+    def net_profit(self):
+        return self.orders["Profit"].sum()
+
+    def average_profit(self):
+        return self.orders["Profit"].mean()
+
+    def std_profit(self):
+        return self.orders["Profit"].std()
+
+    def gross_profit(self):
+        return self.orders[self.orders["Gross Profit"]>=0]["Gross Profit"].sum()
+
+    def gross_loss(self):
+        return  self.orders[self.orders["Gross Profit"]<0]["Gross Profit"].sum()
+
+    def sqn(self):
+        return _np.sqrt(self.number_of_trades()) * (self.average_profit() / (self.std_profit() or np.nan))
