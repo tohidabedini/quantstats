@@ -870,6 +870,7 @@ def metrics(
     if close_prices is not None:
         metrics["Buy & Hold Return %"] = _stats.buy_and_hold_return(close_prices, fee)
         metrics["Max Possible Return (Buy only, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee)
+        metrics["Max Possible Return (Buy only, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0)
 
 
     metrics["WinRate %"] = _stats.win_rate(df, compounded=compounded, prepare_returns=False) * 100
