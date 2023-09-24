@@ -1008,6 +1008,8 @@ def metrics(
         metrics['Gross Profit'] = trades_object.gross_profit()
         metrics['Gross Loss'] = trades_object.gross_loss()
 
+        metrics['Total Paid Fees'] = trades_object.total_paid_fees()
+
 
     else:
         metrics["Profit Factor"] = _stats.profit_factor(df, prepare_returns=False)

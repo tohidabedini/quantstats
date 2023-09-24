@@ -1211,3 +1211,6 @@ class Trades:
 
     def sqn(self):
         return _np.sqrt(self.number_of_trades()) * (self.average_profit() / (self.std_profit() or np.nan))
+
+    def total_paid_fees(self):
+        return self.orders["Paid Fee"].sum()
