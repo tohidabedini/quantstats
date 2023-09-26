@@ -1093,8 +1093,8 @@ def final_equity(equity):
 def max_equity(equity):
     return equity.max()
 
-def max_possible_compound_return(close_prices, fee):
-    return CompoundReturnCalculator().calculate_compound_return_from_prices_list(close_prices, fee=fee) * 100
+def max_possible_compound_return(close_prices, fee, fee_type="floating", buy_or_sell=0):
+    return CompoundReturnCalculator().calculate_compound_return_from_prices_list(close_prices, fee=fee, fee_type=fee_type, buy_or_sell=buy_or_sell) * 100
 
 def buy_and_hold_return(close_prices, fee=0, fee_type="floating"):
     initial_value = close_prices[0]
@@ -1134,11 +1134,34 @@ class CompoundReturnCalculator:
         return rising_sequences
 
     @staticmethod
-    def calculate_returns(rising_sequences, fee=0, fee_type="floating"):
+    def find_falling_sequences(prices_list, reverse=False):
+        falling_sequences = []
+        current_sequence = []
+
+        for value in prices_list:
+            if not current_sequence or value < current_sequence[-1]:
+                current_sequence.append(value)
+            else:
+                if len(current_sequence) > 1:
+                    if reverse:
+                        current_sequence.reverse()
+                    falling_sequences.append(current_sequence)
+                current_sequence = [value]
+
+        if len(current_sequence) > 1:
+            if reverse:
+                current_sequence.reverse()
+            falling_sequences.append(current_sequence)
+
+        return falling_sequences
+
+
+    @staticmethod
+    def calculate_returns(price_sequences, fee=0, fee_type="floating"):
         # fee_type: floating, fixed
         returns = []
 
-        for sequence in rising_sequences:
+        for sequence in price_sequences:
             initial_value = sequence[0]
             final_value = sequence[-1]
 
@@ -1159,13 +1182,30 @@ class CompoundReturnCalculator:
             compound_return *= (1.0 + r)
         return compound_return - 1.0
 
-    def calculate_compound_return_from_prices_list(self, prices_list, log=False, fee=0, fee_type="floating"):
-        rising_sequences = self.find_rising_sequences(prices_list=prices_list)
-        returns = self.calculate_returns(rising_sequences=rising_sequences, fee=fee, fee_type=fee_type)
+    def calculate_compound_return_from_prices_list(self, prices_list, log=False, fee=0, fee_type="floating", buy_or_sell=0):
+        # buy_or_sell: 0 only buy, 1 only sell, 2 both
+        if buy_or_sell==0:
+            rising_sequences = self.find_rising_sequences(prices_list=prices_list)
+            returns = self.calculate_returns(price_sequences=rising_sequences, fee=fee, fee_type=fee_type)
+            price_sequences = rising_sequences
+        elif buy_or_sell==1:
+            falling_sequences = self.find_falling_sequences(prices_list=prices_list, reverse=True)
+            returns = self.calculate_returns(price_sequences=falling_sequences, fee=fee, fee_type=fee_type)
+            price_sequences = falling_sequences
+        elif buy_or_sell==2:
+            returns = []
+
+            rising_sequences = self.find_rising_sequences(prices_list=prices_list)
+            rising_returns = self.calculate_returns(price_sequences=rising_sequences, fee=fee, fee_type=fee_type)
+            returns.extend(rising_returns)
+
+            falling_sequences = self.find_falling_sequences(prices_list=prices_list, reverse=True)
+            falling_returns = self.calculate_returns(price_sequences=falling_sequences, fee=fee, fee_type=fee_type)
+            returns.extend(falling_returns)
 
         if log:
-            for i, sequence in enumerate(rising_sequences):
-                print(f"Rising Sequence {i + 1}: {sequence}")
+            for i, sequence in enumerate(price_sequences):
+                print(f"Price Sequence {i + 1}: {sequence}")
                 print(f"Return: {returns[i]}\n")
 
         compound_return = self.calculate_compound_return(returns=returns)
@@ -1214,3 +1254,6 @@ class Trades:
 
     def total_paid_fees(self):
         return self.orders["Paid Fee"].sum()
+
+    def profit_factor(self):
+        return (self.gross_profit() / _np.abs(self.gross_loss()))

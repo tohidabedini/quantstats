@@ -496,6 +496,7 @@ def full(
     close_prices=None,
     orders=None,
     fee=0,
+    fee_type="floating",
     benchmark=None,
     rf=0.0,
     grayscale=False,
@@ -605,6 +606,7 @@ def full(
             close_prices=close_prices,
             orders=orders,
             fee=fee,
+            fee_type=fee_type,
             benchmark=benchmark,
             rf=rf,
             display=display,
@@ -740,6 +742,7 @@ def metrics(
     close_prices=None,
     orders=None,
     fee=0,
+    fee_type="floating",
     benchmark=None,
     rf=0.0,
     display=True,
@@ -869,8 +872,17 @@ def metrics(
 
     if close_prices is not None:
         metrics["Buy & Hold Return %"] = _stats.buy_and_hold_return(close_prices, fee)
-        metrics["Max Possible Return (Buy only, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee)
-        metrics["Max Possible Return (Buy only, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0)
+
+        metrics["Max Possible Return (Buy only, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee=fee,fee_type=fee_type,buy_or_sell=0)
+        metrics["Max Possible Return (Buy only, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0,buy_or_sell=0)
+
+        metrics["Max Possible Return (Sell only, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee=fee,fee_type=fee_type,buy_or_sell=1)
+        metrics["Max Possible Return (Sell only, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0,buy_or_sell=1)
+
+        metrics["Max Possible Return (Buy and Sell, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee=fee,fee_type=fee_type,buy_or_sell=2)
+        metrics["Max Possible Return (Buy and Sell, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0,buy_or_sell=2)
+
+        metrics["~~~~~~~~~~~~~~~"] = blank
 
 
     metrics["WinRate %"] = _stats.win_rate(df, compounded=compounded, prepare_returns=False) * 100
@@ -1000,7 +1012,7 @@ def metrics(
     metrics["~~~~~~~"] = blank
 
     if orders is not None:
-        metrics["Profit Factor"] = _stats.profit_factor(df, prepare_returns=False)
+        metrics["Profit Factor"] = trades_object.profit_factor()
         metrics['Expectancy %'] = trades_object.average_trade_return()
         metrics['SQN'] = trades_object.sqn()
 
