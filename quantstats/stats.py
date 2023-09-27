@@ -1215,45 +1215,79 @@ class CompoundReturnCalculator:
 class Trades:
     def __init__(self, orders):
         self.orders=orders
+        self.buy_orders=self.get_buy_or_sell_orders(type_="Buy")
+        self.sell_orders=self.get_buy_or_sell_orders(type_="Sell")
 
-    def number_of_trades(self):
-        return len(self.orders)
+    def get_orders_based_on_types(self, type_):
+        # type= 0: All, 1: Buy, 2: Sell
+        if type_==0:
+            return self.orders
+        elif type_==1:
+            return self.buy_orders
+        elif type_==2:
+            return self.sell_orders
 
-    def best_trade_return(self):
-        return self.orders["Return"].max() * 100
+    def get_buy_or_sell_orders(self, type_):
+        # type= Buy Sell
+        selected_orders = self.orders[self.orders["Type"] == type_]
+        return selected_orders
 
-    def worst_trade_return(self):
-        return self.orders["Return"].min() * 100
+    def number_of_trades(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return len(orders)
 
-    def average_trade_return(self):
-        return self.orders["Return"].mean() * 100
+    def best_trade_return(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders["Return"].max() * 100
 
-    def max_trade_duration(self):
-        return self.orders["Duration"].max()
+    def worst_trade_return(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders["Return"].min() * 100
 
-    def average_trade_duration(self):
-        return self.orders["Duration"].mean()
+    def average_trade_return(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders["Return"].mean() * 100
 
-    def net_profit(self):
-        return self.orders["Profit"].sum()
+    def max_trade_duration(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders["Duration"].max()
 
-    def average_profit(self):
-        return self.orders["Profit"].mean()
+    def average_trade_duration(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders["Duration"].mean()
 
-    def std_profit(self):
-        return self.orders["Profit"].std()
+    def net_profit(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders["Profit"].sum()
 
-    def gross_profit(self):
-        return self.orders[self.orders["Gross Profit"]>=0]["Gross Profit"].sum()
+    def average_profit(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders["Profit"].mean()
 
-    def gross_loss(self):
-        return  self.orders[self.orders["Gross Profit"]<0]["Gross Profit"].sum()
+    def std_profit(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders["Profit"].std()
 
-    def sqn(self):
-        return _np.sqrt(self.number_of_trades()) * (self.average_profit() / (self.std_profit() or np.nan))
+    def gross_profit(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders[orders["Gross Profit"]>=0]["Gross Profit"].sum()
 
-    def total_paid_fees(self):
-        return self.orders["Paid Fee"].sum()
+    def gross_loss(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return  orders[orders["Gross Profit"]<0]["Gross Profit"].sum()
 
-    def profit_factor(self):
-        return (self.gross_profit() / _np.abs(self.gross_loss()))
+    def sqn(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return _np.sqrt(self.number_of_trades(type_)) * (self.average_profit(type_) / (self.std_profit(type_) or np.nan))
+
+    def total_paid_fees(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return orders["Paid Fee"].sum()
+
+    def profit_factor(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return (self.gross_profit(type_) / _np.abs(self.gross_loss(type_)))
+
+    def win_rate(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        return 100 * len(orders[orders["Profit"]>0])/len(orders[orders["Profit"] != 0])

@@ -884,8 +884,42 @@ def metrics(
 
         metrics["~~~~~~~~~~~~~~~"] = blank
 
+    if orders is not None:
+        metrics["WinRate %"] = trades_object.win_rate()
+        metrics["Profit Factor"] = trades_object.profit_factor()
+        metrics["Net Profit"] = trades_object.net_profit()
+        metrics["Gross Profit"] = trades_object.gross_profit()
+        metrics["Gross Loss"] = trades_object.gross_loss()
 
-    metrics["WinRate %"] = _stats.win_rate(df, compounded=compounded, prepare_returns=False) * 100
+        metrics["~~~~~~~~~~~~~~~~~"] = blank
+
+        metrics["WinRate (Buy) %"] = trades_object.win_rate(type_=1)
+        metrics["Profit Factor (Buy)"] = trades_object.profit_factor(type_=1)
+        metrics["Net Profit (Buy)"] = trades_object.net_profit(type_=1)
+        metrics["Gross Profit (Buy)"] = trades_object.gross_profit(type_=1)
+        metrics["Gross Loss (Buy)"] = trades_object.gross_loss(type_=1)
+
+        metrics["~~~~~~~~~~~~~~~~~~"] = blank
+
+        metrics["WinRate (Sell) %"] = trades_object.win_rate(type_=2)
+        metrics["Profit Factor (Sell)"] = trades_object.profit_factor(type_=2)
+        metrics["Net Profit (Sell)"] = trades_object.net_profit(type_=2)
+        metrics["Gross Profit (Sell)"] = trades_object.gross_profit(type_=2)
+        metrics["Gross Loss (Sell)"] = trades_object.gross_loss(type_=2)
+
+        metrics["~~~~~~~~~~~~~~~~~~~"] = blank
+
+        metrics["Total Paid Fees"] = trades_object.total_paid_fees()
+        metrics["Expectancy %"] = trades_object.average_trade_return()
+        metrics["SQN"] = trades_object.sqn()
+
+    else:
+        metrics["WinRate %"] = _stats.win_rate(df, compounded=compounded, prepare_returns=False) * 100
+        metrics["Profit Factor"] = _stats.profit_factor(df, prepare_returns=False)
+        metrics['Expectancy %'] = _stats.avg_return(df, compounded=compounded, prepare_returns=False) * 100
+
+    metrics["~~~~~~~"] = blank
+
 
     metrics["Sharpe"] = _stats.sharpe(df, rf, win_year, True)
     metrics["Prob. Sharpe Ratio %"] = (
@@ -1009,23 +1043,6 @@ def metrics(
     #     metrics['GPR (3M)'] = _stats.gain_to_pain_ratio(df, rf, "Q")
     #     metrics['GPR (6M)'] = _stats.gain_to_pain_ratio(df, rf, "2Q")
     #     metrics['GPR (1Y)'] = _stats.gain_to_pain_ratio(df, rf, "A")
-    metrics["~~~~~~~"] = blank
-
-    if orders is not None:
-        metrics["Profit Factor"] = trades_object.profit_factor()
-        metrics['Expectancy %'] = trades_object.average_trade_return()
-        metrics['SQN'] = trades_object.sqn()
-
-        metrics['Net Profit'] = trades_object.net_profit()
-        metrics['Gross Profit'] = trades_object.gross_profit()
-        metrics['Gross Loss'] = trades_object.gross_loss()
-
-        metrics['Total Paid Fees'] = trades_object.total_paid_fees()
-
-
-    else:
-        metrics["Profit Factor"] = _stats.profit_factor(df, prepare_returns=False)
-        metrics['Expectancy %'] = _stats.avg_return(df, compounded=compounded, prepare_returns=False) * 100
 
     metrics["~~~~~~~~~~~~~"] = blank
     metrics["Payoff Ratio"] = _stats.payoff_ratio(df, prepare_returns=False)
