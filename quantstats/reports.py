@@ -885,29 +885,31 @@ def metrics(
         metrics["~~~~~~~~~~~~~~~"] = blank
 
     if orders is not None:
-        metrics["WinRate %"] = trades_object.win_rate()
-        metrics["Profit Factor"] = trades_object.profit_factor()
-        metrics["Net Profit"] = trades_object.net_profit()
-        metrics["Gross Profit"] = trades_object.gross_profit()
-        metrics["Gross Loss"] = trades_object.gross_loss()
+        if trades_object.get_len_orders_based_on_types(type_=0) != 0 :
+            metrics["WinRate %"] = trades_object.win_rate()
+            metrics["Profit Factor"] = trades_object.profit_factor()
+            metrics["Net Profit"] = trades_object.net_profit()
+            metrics["Gross Profit"] = trades_object.gross_profit()
+            metrics["Gross Loss"] = trades_object.gross_loss()
 
-        metrics["~~~~~~~~~~~~~~~~~"] = blank
+            metrics["~~~~~~~~~~~~~~~~~"] = blank
+        if trades_object.get_len_orders_based_on_types(type_=1) != 0:
+            metrics["WinRate (Buy) %"] = trades_object.win_rate(type_=1)
+            metrics["Profit Factor (Buy)"] = trades_object.profit_factor(type_=1)
+            metrics["Net Profit (Buy)"] = trades_object.net_profit(type_=1)
+            metrics["Gross Profit (Buy)"] = trades_object.gross_profit(type_=1)
+            metrics["Gross Loss (Buy)"] = trades_object.gross_loss(type_=1)
 
-        metrics["WinRate (Buy) %"] = trades_object.win_rate(type_=1)
-        metrics["Profit Factor (Buy)"] = trades_object.profit_factor(type_=1)
-        metrics["Net Profit (Buy)"] = trades_object.net_profit(type_=1)
-        metrics["Gross Profit (Buy)"] = trades_object.gross_profit(type_=1)
-        metrics["Gross Loss (Buy)"] = trades_object.gross_loss(type_=1)
+            metrics["~~~~~~~~~~~~~~~~~~"] = blank
+        if trades_object.get_len_orders_based_on_types(type_=2) != 0:
 
-        metrics["~~~~~~~~~~~~~~~~~~"] = blank
+            metrics["WinRate (Sell) %"] = trades_object.win_rate(type_=2)
+            metrics["Profit Factor (Sell)"] = trades_object.profit_factor(type_=2)
+            metrics["Net Profit (Sell)"] = trades_object.net_profit(type_=2)
+            metrics["Gross Profit (Sell)"] = trades_object.gross_profit(type_=2)
+            metrics["Gross Loss (Sell)"] = trades_object.gross_loss(type_=2)
 
-        metrics["WinRate (Sell) %"] = trades_object.win_rate(type_=2)
-        metrics["Profit Factor (Sell)"] = trades_object.profit_factor(type_=2)
-        metrics["Net Profit (Sell)"] = trades_object.net_profit(type_=2)
-        metrics["Gross Profit (Sell)"] = trades_object.gross_profit(type_=2)
-        metrics["Gross Loss (Sell)"] = trades_object.gross_loss(type_=2)
-
-        metrics["~~~~~~~~~~~~~~~~~~~"] = blank
+            metrics["~~~~~~~~~~~~~~~~~~~"] = blank
 
         metrics["Total Paid Fees"] = trades_object.total_paid_fees()
         metrics["Expectancy %"] = trades_object.average_trade_return()

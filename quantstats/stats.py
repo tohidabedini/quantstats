@@ -1291,3 +1291,8 @@ class Trades:
     def win_rate(self, type_=0):
         orders = self.get_orders_based_on_types(type_)
         return 100 * len(orders[orders["Profit"]>0])/len(orders[orders["Profit"] != 0])
+
+    def get_len_orders_based_on_types(self, type_=0):
+        orders = self.get_orders_based_on_types(type_)
+        len_orders = len(orders)
+        return len_orders
