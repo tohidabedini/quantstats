@@ -509,6 +509,7 @@ def full(
     plot=True,
     **kwargs,
 ):
+    results_dict = dict()
 
     # prepare timeseries
     if match_dates:
@@ -556,6 +557,27 @@ def full(
                 dd_info.columns = map(lambda x: str(x).title(), dd_info.columns)
             dd_info_dict[ptf] = dd_info
 
+    if not display:
+        metrics(
+            returns=returns,
+            equity=equity,
+            close_prices=close_prices,
+            orders=orders,
+            fee=fee,
+            benchmark=benchmark,
+            rf=rf,
+            display=False,
+            mode="full",
+            compounded=compounded,
+            periods_per_year=periods_per_year,
+            prepare_returns=False,
+            benchmark_title=benchmark_title,
+            strategy_title=strategy_title,
+            results_dict=results_dict
+        )
+
+        return sanitize_results_dict(results_dict)
+
     if _utils._in_notebook():
         iDisplay(iHTML("<h4>Performance Metrics</h4>"))
         iDisplay(
@@ -574,6 +596,7 @@ def full(
                 prepare_returns=False,
                 benchmark_title=benchmark_title,
                 strategy_title=strategy_title,
+                results_dict = results_dict
             )
         )
 
@@ -616,6 +639,7 @@ def full(
             prepare_returns=False,
             benchmark_title=benchmark_title,
             strategy_title=strategy_title,
+            results_dict = results_dict,
         )
         print("\n\n")
         print("[Worst 5 Drawdowns]\n")
@@ -655,6 +679,8 @@ def full(
             active=active,
             rolling=rolling,
         )
+
+    return sanitize_results_dict(results_dict)
 
 
 def basic(
@@ -735,6 +761,14 @@ def basic(
         active=active,
     )
 
+def sanitize_results_dict(results_dict):
+    for key, value in results_dict.items():
+        if isinstance(value, _pd.core.series.Series):
+            results_dict[key] = value.to_numpy()[0]
+        if isinstance(value, _np.ndarray) or isinstance(value, list):
+            results_dict[key] = value[0]
+
+    return results_dict
 
 def metrics(
     returns,
@@ -752,6 +786,7 @@ def metrics(
     periods_per_year=PERIODS_PER_YEAR,
     prepare_returns=True,
     match_dates=True,
+    results_dict=None,
     **kwargs,
 ):
 
@@ -850,103 +885,107 @@ def metrics(
     )
 
     metrics = _pd.DataFrame()
-    metrics["Start Period"] = _pd.Series(s_start)
-    metrics["End Period"] = _pd.Series(s_end)
-    metrics["Risk-Free Rate %"] = _pd.Series(s_rf) * 100
-    metrics["Time in Market %"] = _stats.exposure(df, prepare_returns=False) * pct
+    results_dict["Start Period"] = metrics["Start Period"] = _pd.Series(s_start)
+    results_dict["End Period"] = metrics["End Period"] = _pd.Series(s_end)
+    results_dict["Risk-Free Rate %"] = metrics["Risk-Free Rate %"] = _pd.Series(s_rf) * 100
+    results_dict["Time in Market %"] = metrics["Time in Market %"] = _stats.exposure(df, prepare_returns=False) * pct
 
     metrics["~"] = blank
 
     if compounded:
-        metrics["Cumulative Return %"] = (_stats.comp(df) * pct).map("{:,.2f}".format)
+        temp = (_stats.comp(df) * pct)
+        results_dict["Cumulative Return %"] = temp
+        metrics["Cumulative Return %"] = temp.map("{:,.2f}".format)
     else:
-        metrics["Total Return %"] = (df.sum() * pct).map("{:,.2f}".format)
+        temp = (df.sum() * pct)
+        results_dict["Total Return %"] = temp
+        metrics["Total Return %"] = temp.map("{:,.2f}".format)
 
-    metrics["CAGR﹪%"] = _stats.cagr(df, rf, compounded) * pct
+    results_dict["CAGR﹪%"] = metrics["CAGR﹪%"] = _stats.cagr(df, rf, compounded) * pct
 
     metrics["~~~~~~~~~~~~~~"] = blank
 
     if equity is not None:
-        metrics["Final Equity $"] = _stats.final_equity(equity)
-        metrics["Max Equity $"] = _stats.max_equity(equity)
+        results_dict["Final Equity $"] = metrics["Final Equity $"] = _stats.final_equity(equity)
+        results_dict["Max Equity $"] = metrics["Max Equity $"] = _stats.max_equity(equity)
 
     if close_prices is not None:
-        metrics["Buy & Hold Return %"] = _stats.buy_and_hold_return(close_prices, fee)
+        results_dict["Buy & Hold Return %"] = metrics["Buy & Hold Return %"] = _stats.buy_and_hold_return(close_prices, fee)
 
-        metrics["Max Possible Return (Buy only, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee=fee,fee_type=fee_type,buy_or_sell=0)
-        metrics["Max Possible Return (Buy only, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0,buy_or_sell=0)
+        results_dict["Max Possible Return (Buy only, Compound) %"] = metrics["Max Possible Return (Buy only, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee=fee,fee_type=fee_type,buy_or_sell=0)
+        results_dict["Max Possible Return (Buy only, Compound, No Fee) %"] = metrics["Max Possible Return (Buy only, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0,buy_or_sell=0)
 
-        metrics["Max Possible Return (Sell only, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee=fee,fee_type=fee_type,buy_or_sell=1)
-        metrics["Max Possible Return (Sell only, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0,buy_or_sell=1)
+        results_dict["Max Possible Return (Sell only, Compound) %"] = metrics["Max Possible Return (Sell only, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee=fee,fee_type=fee_type,buy_or_sell=1)
+        results_dict["Max Possible Return (Sell only, Compound, No Fee) %"] = metrics["Max Possible Return (Sell only, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0,buy_or_sell=1)
 
-        metrics["Max Possible Return (Buy and Sell, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee=fee,fee_type=fee_type,buy_or_sell=2)
-        metrics["Max Possible Return (Buy and Sell, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0,buy_or_sell=2)
+        results_dict["Max Possible Return (Buy and Sell, Compound) %"] = metrics["Max Possible Return (Buy and Sell, Compound) %"] = _stats.max_possible_compound_return(close_prices,fee=fee,fee_type=fee_type,buy_or_sell=2)
+        results_dict["Max Possible Return (Buy and Sell, Compound, No Fee) %"] = metrics["Max Possible Return (Buy and Sell, Compound, No Fee) %"] = _stats.max_possible_compound_return(close_prices,fee=0,buy_or_sell=2)
 
         metrics["~~~~~~~~~~~~~~~"] = blank
 
     if orders is not None:
         if trades_object.get_len_orders_based_on_types(type_=0) != 0 :
-            metrics["WinRate %"] = trades_object.win_rate()
-            metrics["Profit Factor"] = trades_object.profit_factor()
-            metrics["Net Profit"] = trades_object.net_profit()
-            metrics["Gross Profit"] = trades_object.gross_profit()
-            metrics["Gross Loss"] = trades_object.gross_loss()
+            results_dict["WinRate %"] = metrics["WinRate %"] = trades_object.win_rate()
+            results_dict["Profit Factor"] = metrics["Profit Factor"] = trades_object.profit_factor()
+            results_dict["Net Profit"] = metrics["Net Profit"] = trades_object.net_profit()
+            results_dict["Gross Profit"] = metrics["Gross Profit"] = trades_object.gross_profit()
+            results_dict["Gross Loss"] = metrics["Gross Loss"] = trades_object.gross_loss()
 
             metrics["~~~~~~~~~~~~~~~~~"] = blank
         if trades_object.get_len_orders_based_on_types(type_=1) != 0:
-            metrics["WinRate (Buy) %"] = trades_object.win_rate(type_=1)
-            metrics["Profit Factor (Buy)"] = trades_object.profit_factor(type_=1)
-            metrics["Net Profit (Buy)"] = trades_object.net_profit(type_=1)
-            metrics["Gross Profit (Buy)"] = trades_object.gross_profit(type_=1)
-            metrics["Gross Loss (Buy)"] = trades_object.gross_loss(type_=1)
+            results_dict["WinRate (Buy) %"] = metrics["WinRate (Buy) %"] = trades_object.win_rate(type_=1)
+            results_dict["Profit Factor (Buy)"] = metrics["Profit Factor (Buy)"] = trades_object.profit_factor(type_=1)
+            results_dict["Net Profit (Buy)"] = metrics["Net Profit (Buy)"] = trades_object.net_profit(type_=1)
+            results_dict["Gross Profit (Buy)"] = metrics["Gross Profit (Buy)"] = trades_object.gross_profit(type_=1)
+            results_dict["Gross Loss (Buy)"] = metrics["Gross Loss (Buy)"] = trades_object.gross_loss(type_=1)
 
             metrics["~~~~~~~~~~~~~~~~~~"] = blank
         if trades_object.get_len_orders_based_on_types(type_=2) != 0:
 
-            metrics["WinRate (Sell) %"] = trades_object.win_rate(type_=2)
-            metrics["Profit Factor (Sell)"] = trades_object.profit_factor(type_=2)
-            metrics["Net Profit (Sell)"] = trades_object.net_profit(type_=2)
-            metrics["Gross Profit (Sell)"] = trades_object.gross_profit(type_=2)
-            metrics["Gross Loss (Sell)"] = trades_object.gross_loss(type_=2)
+            results_dict["WinRate (Sell) %"] = metrics["WinRate (Sell) %"] = trades_object.win_rate(type_=2)
+            results_dict["Profit Factor (Sell)"] = metrics["Profit Factor (Sell)"] = trades_object.profit_factor(type_=2)
+            results_dict["Net Profit (Sell)"] = metrics["Net Profit (Sell)"] = trades_object.net_profit(type_=2)
+            results_dict["Gross Profit (Sell)"] = metrics["Gross Profit (Sell)"] = trades_object.gross_profit(type_=2)
+            results_dict["Gross Loss (Sell)"] = metrics["Gross Loss (Sell)"] = trades_object.gross_loss(type_=2)
 
             metrics["~~~~~~~~~~~~~~~~~~~"] = blank
 
-        metrics["Total Paid Fees"] = trades_object.total_paid_fees()
-        metrics["Expectancy %"] = trades_object.average_trade_return()
-        metrics["SQN"] = trades_object.sqn()
+        results_dict["Total Paid Fees"] = metrics["Total Paid Fees"] = trades_object.total_paid_fees()
+        results_dict["Expectancy %"] = metrics["Expectancy %"] = trades_object.average_trade_return()
+        results_dict["SQN"] = metrics["SQN"] = trades_object.sqn()
 
     else:
-        metrics["WinRate %"] = _stats.win_rate(df, compounded=compounded, prepare_returns=False) * 100
-        metrics["Profit Factor"] = _stats.profit_factor(df, prepare_returns=False)
-        metrics['Expectancy %'] = _stats.avg_return(df, compounded=compounded, prepare_returns=False) * 100
+        results_dict["WinRate %"] = metrics["WinRate %"] = _stats.win_rate(df, compounded=compounded, prepare_returns=False) * 100
+        results_dict["Profit Factor"] = metrics["Profit Factor"] = _stats.profit_factor(df, prepare_returns=False)
+        results_dict['Expectancy %'] = metrics['Expectancy %'] = _stats.avg_return(df, compounded=compounded, prepare_returns=False) * 100
 
     metrics["~~~~~~~"] = blank
 
 
-    metrics["Sharpe"] = _stats.sharpe(df, rf, win_year, True)
-    metrics["Prob. Sharpe Ratio %"] = (
+    results_dict["Sharpe"] = metrics["Sharpe"] = _stats.sharpe(df, rf, win_year, True)
+    results_dict["Prob. Sharpe Ratio %"] = metrics["Prob. Sharpe Ratio %"] = (
         _stats.probabilistic_sharpe_ratio(df, rf, win_year, False) * pct
     )
     if mode.lower() == "full":
-        metrics["Smart Sharpe"] = _stats.smart_sharpe(df, rf, win_year, True)
+        results_dict["Smart Sharpe"] = metrics["Smart Sharpe"] = _stats.smart_sharpe(df, rf, win_year, True)
         # metrics['Prob. Smart Sharpe Ratio %'] = _stats.probabilistic_sharpe_ratio(df, rf, win_year, False, True) * pct
 
-    metrics["Sortino"] = _stats.sortino(df, rf, win_year, True)
+    results_dict["Sortino"] = metrics["Sortino"] = _stats.sortino(df, rf, win_year, True)
     if mode.lower() == "full":
         # metrics['Prob. Sortino Ratio %'] = _stats.probabilistic_sortino_ratio(df, rf, win_year, False) * pct
-        metrics["Smart Sortino"] = _stats.smart_sortino(df, rf, win_year, True)
+        results_dict["Smart Sortino"] = metrics["Smart Sortino"] = _stats.smart_sortino(df, rf, win_year, True)
         # metrics['Prob. Smart Sortino Ratio %'] = _stats.probabilistic_sortino_ratio(df, rf, win_year, False, True) * pct
 
-    metrics["Sortino/√2"] = metrics["Sortino"] / _sqrt(2)
+    results_dict["Sortino/√2"] = metrics["Sortino/√2"] = metrics["Sortino"] / _sqrt(2)
     if mode.lower() == "full":
         # metrics['Prob. Sortino/√2 Ratio %'] = _stats.probabilistic_adjusted_sortino_ratio(df, rf, win_year, False) * pct
-        metrics["Smart Sortino/√2"] = metrics["Smart Sortino"] / _sqrt(2)
+        results_dict["Smart Sortino/√2"] = metrics["Smart Sortino/√2"] = metrics["Smart Sortino"] / _sqrt(2)
         # metrics['Prob. Smart Sortino/√2 Ratio %'] = _stats.probabilistic_adjusted_sortino_ratio(df, rf, win_year, False, True) * pct
-    metrics["Omega"] = _stats.omega(df, rf, 0.0, win_year)
+    results_dict["Omega"] = metrics["Omega"] = _stats.omega(df, rf, 0.0, win_year)
 
     metrics["~~~~~~~~"] = blank
-    metrics["Max Drawdown %"] = blank
-    metrics["Longest DD Days"] = blank
+    results_dict["Max Drawdown %"] = metrics["Max Drawdown %"] = blank
+    results_dict["Longest DD Days"] = metrics["Longest DD Days"] = blank
 
     if mode.lower() == "full":
         if isinstance(returns, _pd.Series):
@@ -972,19 +1011,19 @@ def metrics(
 
             vol_ = [ret_vol, bench_vol]
             if isinstance(ret_vol, list):
-                metrics["Volatility (ann.) %"] = list(_pd.core.common.flatten(vol_))
+                results_dict["Volatility (ann.) %"] = metrics["Volatility (ann.) %"] = list(_pd.core.common.flatten(vol_))
             else:
-                metrics["Volatility (ann.) %"] = vol_
+                results_dict["Volatility (ann.) %"] = metrics["Volatility (ann.) %"] = vol_
 
             if isinstance(returns, _pd.Series):
-                metrics["R^2"] = _stats.r_squared(
+                results_dict["R^2"] = metrics["R^2"] = _stats.r_squared(
                     df["returns"], df["benchmark"], prepare_returns=False
                 )
-                metrics["Information Ratio"] = _stats.information_ratio(
+                results_dict["Information Ratio"] = metrics["Information Ratio"] = _stats.information_ratio(
                     df["returns"], df["benchmark"], prepare_returns=False
                 )
             elif isinstance(returns, _pd.DataFrame):
-                metrics["R^2"] = (
+                results_dict["R^2"] = metrics["R^2"] = (
                     [
                         _stats.r_squared(
                             df[strategy_col], df["benchmark"], prepare_returns=False
@@ -992,7 +1031,7 @@ def metrics(
                         for strategy_col in df_strategy_columns
                     ]
                 ) + ["-"]
-                metrics["Information Ratio"] = (
+                results_dict["Information Ratio"] = metrics["Information Ratio"] = (
                     [
                         _stats.information_ratio(
                             df[strategy_col], df["benchmark"], prepare_returns=False
@@ -1002,138 +1041,138 @@ def metrics(
                 ) + ["-"]
         else:
             if isinstance(returns, _pd.Series):
-                metrics["Volatility (ann.) %"] = [ret_vol]
+                results_dict["Volatility (ann.) %"] = metrics["Volatility (ann.) %"] = [ret_vol]
             elif isinstance(returns, _pd.DataFrame):
-                metrics["Volatility (ann.) %"] = ret_vol
+                results_dict["Volatility (ann.) %"] = metrics["Volatility (ann.) %"] = ret_vol
 
-        metrics["Calmar"] = _stats.calmar(df, prepare_returns=False)
-        metrics["Skew"] = _stats.skew(df, prepare_returns=False)
-        metrics["Kurtosis"] = _stats.kurtosis(df, prepare_returns=False)
+        results_dict["Calmar"] = metrics["Calmar"] = _stats.calmar(df, prepare_returns=False)
+        results_dict["Skew"] = metrics["Skew"] = _stats.skew(df, prepare_returns=False)
+        results_dict["Kurtosis"] = metrics["Kurtosis"] = _stats.kurtosis(df, prepare_returns=False)
 
         metrics["~~~~~~~~~~"] = blank
 
-        metrics["Expected Daily %%"] = (
+        results_dict["Expected Daily %%"] = metrics["Expected Daily %%"] = (
             _stats.expected_return(df, compounded=compounded, prepare_returns=False) * pct
         )
-        metrics["Expected Monthly %%"] = (
+        results_dict["Expected Monthly %%"] = metrics["Expected Monthly %%"] = (
             _stats.expected_return(df, compounded=compounded, aggregate="M", prepare_returns=False) * pct
         )
-        metrics["Expected Yearly %%"] = (
+        results_dict["Expected Yearly %%"] = metrics["Expected Yearly %%"] = (
             _stats.expected_return(df, compounded=compounded, aggregate="A", prepare_returns=False) * pct
         )
-        metrics["Kelly Criterion %"] = (
+        results_dict["Kelly Criterion %"] = metrics["Kelly Criterion %"] = (
             _stats.kelly_criterion(df, prepare_returns=False) * pct
         )
-        metrics["Risk of Ruin %"] = _stats.risk_of_ruin(df, prepare_returns=False)
+        results_dict["Risk of Ruin %"] = metrics["Risk of Ruin %"] = _stats.risk_of_ruin(df, prepare_returns=False)
 
-        metrics["Daily Value-at-Risk %"] = -abs(
+        results_dict["Daily Value-at-Risk %"] = metrics["Daily Value-at-Risk %"] = -abs(
             _stats.var(df, prepare_returns=False) * pct
         )
-        metrics["Expected Shortfall (cVaR) %"] = -abs(
+        results_dict["Expected Shortfall (cVaR) %"] = metrics["Expected Shortfall (cVaR) %"] = -abs(
             _stats.cvar(df, prepare_returns=False) * pct
         )
 
     metrics["~~~~~~"] = blank
 
     if mode.lower() == "full":
-        metrics["Max Consecutive Wins *int"] = _stats.consecutive_wins(df)
-        metrics["Max Consecutive Losses *int"] = _stats.consecutive_losses(df)
+        results_dict["Max Consecutive Wins *int"] = metrics["Max Consecutive Wins *int"] = _stats.consecutive_wins(df)
+        results_dict["Max Consecutive Losses *int"] = metrics["Max Consecutive Losses *int"] = _stats.consecutive_losses(df)
 
-    metrics["Gain/Pain Ratio"] = _stats.gain_to_pain_ratio(df, rf)
-    metrics["Gain/Pain (1M)"] = _stats.gain_to_pain_ratio(df, rf, "M")
+    results_dict["Gain/Pain Ratio"] = metrics["Gain/Pain Ratio"] = _stats.gain_to_pain_ratio(df, rf)
+    results_dict["Gain/Pain (1M)"] = metrics["Gain/Pain (1M)"] = _stats.gain_to_pain_ratio(df, rf, "M")
     # if mode.lower() == 'full':
     #     metrics['GPR (3M)'] = _stats.gain_to_pain_ratio(df, rf, "Q")
     #     metrics['GPR (6M)'] = _stats.gain_to_pain_ratio(df, rf, "2Q")
     #     metrics['GPR (1Y)'] = _stats.gain_to_pain_ratio(df, rf, "A")
 
     metrics["~~~~~~~~~~~~~"] = blank
-    metrics["Payoff Ratio"] = _stats.payoff_ratio(df, prepare_returns=False)
-    metrics["Common Sense Ratio"] = _stats.common_sense_ratio(df, prepare_returns=False)
-    metrics["CPC Index"] = _stats.cpc_index(df, prepare_returns=False)
-    metrics["Tail Ratio"] = _stats.tail_ratio(df, prepare_returns=False)
-    metrics["Outlier Win Ratio"] = _stats.outlier_win_ratio(df, prepare_returns=False)
-    metrics["Outlier Loss Ratio"] = _stats.outlier_loss_ratio(df, prepare_returns=False)
+    results_dict["Payoff Ratio"] = metrics["Payoff Ratio"] = _stats.payoff_ratio(df, prepare_returns=False)
+    results_dict["Common Sense Ratio"] = metrics["Common Sense Ratio"] = _stats.common_sense_ratio(df, prepare_returns=False)
+    results_dict["CPC Index"] = metrics["CPC Index"] = _stats.cpc_index(df, prepare_returns=False)
+    results_dict["Tail Ratio"] = metrics["Tail Ratio"] = _stats.tail_ratio(df, prepare_returns=False)
+    results_dict["Outlier Win Ratio"] = metrics["Outlier Win Ratio"] = _stats.outlier_win_ratio(df, prepare_returns=False)
+    results_dict["Outlier Loss Ratio"] = metrics["Outlier Loss Ratio"] = _stats.outlier_loss_ratio(df, prepare_returns=False)
 
     # returns
     metrics["~~"] = blank
     comp_func = _stats.comp if compounded else _np.sum
 
     today = df.index[-1]  # _dt.today()
-    metrics["MTD %"] = comp_func(df[df.index >= _dt(today.year, today.month, 1)]) * pct
+    results_dict["MTD %"] = metrics["MTD %"] = comp_func(df[df.index >= _dt(today.year, today.month, 1)]) * pct
 
     d = today - relativedelta(months=3)
-    metrics["3M %"] = comp_func(df[df.index >= d]) * pct
+    results_dict["3M %"] = metrics["3M %"] = comp_func(df[df.index >= d]) * pct
 
     d = today - relativedelta(months=6)
-    metrics["6M %"] = comp_func(df[df.index >= d]) * pct
+    results_dict["6M %"] = metrics["6M %"] = comp_func(df[df.index >= d]) * pct
 
-    metrics["YTD %"] = comp_func(df[df.index >= _dt(today.year, 1, 1)]) * pct
+    results_dict["YTD %"] = metrics["YTD %"] = comp_func(df[df.index >= _dt(today.year, 1, 1)]) * pct
 
     d = today - relativedelta(years=1)
-    metrics["1Y %"] = comp_func(df[df.index >= d]) * pct
+    results_dict["1Y %"] = metrics["1Y %"] = comp_func(df[df.index >= d]) * pct
 
     d = today - relativedelta(months=35)
-    metrics["3Y (ann.) %"] = _stats.cagr(df[df.index >= d], 0.0, compounded) * pct
+    results_dict["3Y (ann.) %"] = metrics["3Y (ann.) %"] = _stats.cagr(df[df.index >= d], 0.0, compounded) * pct
 
     d = today - relativedelta(months=59)
-    metrics["5Y (ann.) %"] = _stats.cagr(df[df.index >= d], 0.0, compounded) * pct
+    results_dict["5Y (ann.) %"] = metrics["5Y (ann.) %"] = _stats.cagr(df[df.index >= d], 0.0, compounded) * pct
 
     d = today - relativedelta(years=10)
-    metrics["10Y (ann.) %"] = _stats.cagr(df[df.index >= d], 0.0, compounded) * pct
+    results_dict["10Y (ann.) %"] = metrics["10Y (ann.) %"] = _stats.cagr(df[df.index >= d], 0.0, compounded) * pct
 
-    metrics["All-time (ann.) %"] = _stats.cagr(df, 0.0, compounded) * pct
+    results_dict["All-time (ann.) %"] = metrics["All-time (ann.) %"] = _stats.cagr(df, 0.0, compounded) * pct
 
     # best/worst
     if mode.lower() == "full":
         metrics["~~~"] = blank
-        metrics["Best Day %"] = _stats.best(df, compounded=compounded, prepare_returns=False) * pct
-        metrics["Worst Day %"] = _stats.worst(df, prepare_returns=False) * pct
-        metrics["Best Month %"] = (
+        results_dict["Best Day %"] = metrics["Best Day %"] = _stats.best(df, compounded=compounded, prepare_returns=False) * pct
+        results_dict["Worst Day %"] = metrics["Worst Day %"] = _stats.worst(df, prepare_returns=False) * pct
+        results_dict["Best Month %"] = metrics["Best Month %"] = (
             _stats.best(df, compounded=compounded, aggregate="M", prepare_returns=False) * pct
         )
-        metrics["Worst Month %"] = (
+        results_dict["Worst Month %"] = metrics["Worst Month %"] = (
             _stats.worst(df, aggregate="M", prepare_returns=False) * pct
         )
-        metrics["Best Year %"] = (
+        results_dict["Best Year %"] = metrics["Best Year %"] = (
             _stats.best(df, compounded=compounded, aggregate="A", prepare_returns=False) * pct
         )
-        metrics["Worst Year %"] = (
+        results_dict["Worst Year %"] = metrics["Worst Year %"] = (
             _stats.worst(df, compounded=compounded, aggregate="A", prepare_returns=False) * pct
         )
 
         if orders is not None:
             metrics["~~~~~~~~~"] = blank
-            metrics["# Trades *int"] = trades_object.number_of_trades()
-            metrics["Best Trade Return %"] = trades_object.best_trade_return()
-            metrics["Worst Trade Return %"] = trades_object.worst_trade_return()
-            metrics["Max. Trade Duration"] = trades_object.max_trade_duration()
-            metrics["Avg. Trade Duration"] = trades_object.average_trade_duration()
+            results_dict["# Trades *int"] = metrics["# Trades *int"] = trades_object.number_of_trades()
+            results_dict["Best Trade Return %"] = metrics["Best Trade Return %"] = trades_object.best_trade_return()
+            results_dict["Worst Trade Return %"] = metrics["Worst Trade Return %"] = trades_object.worst_trade_return()
+            results_dict["Max. Trade Duration"] = metrics["Max. Trade Duration"] = trades_object.max_trade_duration()
+            results_dict["Avg. Trade Duration"] = metrics["Avg. Trade Duration"] = trades_object.average_trade_duration()
 
     # dd
     metrics["~~~~"] = blank
     for ix, row in dd.iterrows():
-        metrics[ix] = row
-    metrics["Recovery Factor"] = _stats.recovery_factor(df)
-    metrics["Ulcer Index"] = _stats.ulcer_index(df)
-    metrics["Serenity Index"] = _stats.serenity_index(df, rf)
+        results_dict[ix] = metrics[ix] = row
+    results_dict["Recovery Factor"] = metrics["Recovery Factor"] = _stats.recovery_factor(df)
+    results_dict["Ulcer Index"] = metrics["Ulcer Index"] = _stats.ulcer_index(df)
+    results_dict["Serenity Index"] = metrics["Serenity Index"] = _stats.serenity_index(df, rf)
 
     # win rate
     if mode.lower() == "full":
         metrics["~~~~~"] = blank
-        metrics["Avg. Up Month %"] = (
+        results_dict["Avg. Up Month %"] = metrics["Avg. Up Month %"] = (
             _stats.avg_win(df, compounded=compounded, aggregate="M", prepare_returns=False) * pct
         )
-        metrics["Avg. Down Month %"] = (
+        results_dict["Avg. Down Month %"] = metrics["Avg. Down Month %"] = (
             _stats.avg_loss(df, compounded=compounded, aggregate="M", prepare_returns=False) * pct
         )
-        metrics["Win Days %%"] = _stats.win_rate(df, prepare_returns=False) * pct
-        metrics["Win Month %%"] = (
+        results_dict["Win Days %%"] = metrics["Win Days %%"] = _stats.win_rate(df, prepare_returns=False) * pct
+        results_dict["Win Month %%"] = metrics["Win Month %%"] = (
             _stats.win_rate(df, compounded=compounded, aggregate="M", prepare_returns=False) * pct
         )
-        metrics["Win Quarter %%"] = (
+        results_dict["Win Quarter %%"] = metrics["Win Quarter %%"] = (
             _stats.win_rate(df, compounded=compounded, aggregate="Q", prepare_returns=False) * pct
         )
-        metrics["Win Year %%"] = (
+        results_dict["Win Year %%"] = metrics["Win Year %%"] = (
             _stats.win_rate(df, compounded=compounded, aggregate="A", prepare_returns=False) * pct
         )
 
@@ -1143,13 +1182,13 @@ def metrics(
                 greeks = _stats.greeks(
                     df["returns"], df["benchmark"], win_year, prepare_returns=False
                 )
-                metrics["Beta"] = [str(round(greeks["beta"], 2)), "-"]
-                metrics["Alpha"] = [str(round(greeks["alpha"], 2)), "-"]
-                metrics["Correlation"] = [
+                results_dict["Beta"] = metrics["Beta"] = [str(round(greeks["beta"], 2)), "-"]
+                results_dict["Alpha"] = metrics["Alpha"] = [str(round(greeks["alpha"], 2)), "-"]
+                results_dict["Correlation"] = metrics["Correlation"] = [
                     str(round(df["benchmark"].corr(df["returns"]) * pct, 2)) + "%",
                     "-",
                 ]
-                metrics["Treynor Ratio"] = [
+                results_dict["Treynor Ratio"] = metrics["Treynor Ratio"] = [
                     str(
                         round(
                             _stats.treynor_ratio(
@@ -1172,16 +1211,16 @@ def metrics(
                     )
                     for strategy_col in df_strategy_columns
                 ]
-                metrics["Beta"] = [str(round(g["beta"], 2)) for g in greeks] + ["-"]
-                metrics["Alpha"] = [str(round(g["alpha"], 2)) for g in greeks] + ["-"]
-                metrics["Correlation"] = (
+                results_dict["Beta"] = [str(round(g["beta"], 2)) for g in greeks] + ["-"]
+                results_dict["Alpha"] = metrics["Alpha"] = [str(round(g["alpha"], 2)) for g in greeks] + ["-"]
+                results_dict["Correlation"] = metrics["Correlation"] = (
                     [
                         str(round(df["benchmark"].corr(df[strategy_col]) * pct, 2))
                         + "%"
                         for strategy_col in df_strategy_columns
                     ]
                 ) + ["-"]
-                metrics["Treynor Ratio"] = (
+                results_dict["Treynor Ratio"] = metrics["Treynor Ratio"] = (
                     [
                         str(
                             round(
@@ -1212,19 +1251,19 @@ def metrics(
             metrics[col] = metrics[col] + "%"
 
     try:
-        metrics["Longest DD Days"] = _pd.to_numeric(metrics["Longest DD Days"]).astype(
+        results_dict["Longest DD Days"] = metrics["Longest DD Days"] = _pd.to_numeric(metrics["Longest DD Days"]).astype(
             "int"
         )
-        metrics["Avg. Drawdown Days"] = _pd.to_numeric(
+        results_dict["Avg. Drawdown Days"] = metrics["Avg. Drawdown Days"] = _pd.to_numeric(
             metrics["Avg. Drawdown Days"]
         ).astype("int")
 
         if display or "internal" in kwargs:
-            metrics["Longest DD Days"] = metrics["Longest DD Days"].astype(str)
-            metrics["Avg. Drawdown Days"] = metrics["Avg. Drawdown Days"].astype(str)
+            results_dict["Longest DD Days"] = metrics["Longest DD Days"] = metrics["Longest DD Days"].astype(str)
+            results_dict["Avg. Drawdown Days"] = metrics["Avg. Drawdown Days"] = metrics["Avg. Drawdown Days"].astype(str)
     except Exception:
-        metrics["Longest DD Days"] = "-"
-        metrics["Avg. Drawdown Days"] = "-"
+        results_dict["Longest DD Days"] = metrics["Longest DD Days"] = "-"
+        results_dict["Avg. Drawdown Days"] = metrics["Avg. Drawdown Days"] = "-"
         if display or "internal" in kwargs:
             metrics["Longest DD Days"] = "-"
             metrics["Avg. Drawdown Days"] = "-"
